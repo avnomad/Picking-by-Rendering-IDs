@@ -183,6 +183,22 @@
 			Name="Library"
 			>
 			<File
+				RelativePath="..\..\..\Unsorted\algorithms.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\Unsorted\CPU clock.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\Unsorted\Color\namings\double precision colors.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\Unsorted\FPS.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\Unsorted\Color\wavelength to RGB.cpp"
 				>
 			</File>

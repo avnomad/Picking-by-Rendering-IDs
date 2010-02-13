@@ -2,9 +2,18 @@
 #include <gl/glut.h>
 #include <cstdlib>
 #include <Color/wavelength to RGB.h>
+#include <FPS.h>
+#include <CPU clock.h>
+#include <algorithms.h>
+#include <iostream>
+#include <iomanip>
+#include <sstream>
+#include <color.h>
+#include <Color/glColor.h>
+#include <Color/Namings/double precision colors.h>
 
-#define TABLE_ENTRIES 16
-
+#define TABLE_ENTRIES 16384
+#define COLOR_ENTRIES 17
 
 struct RGBColor
 {
@@ -20,12 +29,17 @@ struct Point
 }; // end struct Point
 
 
-RGBColor color_table[TABLE_ENTRIES];
+RGBColor color_table[COLOR_ENTRIES] = {{1,0,0},{1,1,0},{1,0.75,0},{1,0.5,0},{0,0.25,0},{0,0.5,0},{0,0.75,0},{0,1,0},
+			{0.25,0,0},{0.5,0.5,0},{1,0,0.5},{0,0,1},{0.75,0.75,1},{0.5,0.5,1},{0,1,1},{0,0.5,1},{0.5,0.25,0}};
 Point coord_table[TABLE_ENTRIES];
 
 GLint selection = 255;
 int oldx;
 int oldy;
+double oldtime;
+FPS<double> stat(75);
+unsigned int frame_count;
+double last_stat;
 
 
 void display()
@@ -37,7 +51,7 @@ void display()
 	glPolygonMode(GL_FRONT,GL_FILL);
 	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
 	{
-		glColor3fv((float*)&color_table[c]);
+		glColor3fv((float*)&color_table[c % COLOR_ENTRIES]);
 		glStencilFunc(GL_ALWAYS,c,0xffffffff);
 		glBegin(GL_QUADS);
 			glVertex3i(coord_table[c].x,coord_table[c].y,-c);
@@ -70,9 +84,22 @@ void display()
 		glEnd();
 	} // end if
 
+	double temp = CPUclock::currentTime();
+	stat.push(temp-oldtime);
+	oldtime = temp;
+	if(++frame_count % 75 == 0)
+		last_stat = stat.fps();
+	std::ostringstream sout;
+	sout << std::fixed << std::setprecision(1) << last_stat << " fps";
+	glColor(yellow);
+	displayString(Vector2D<>(10,glutGet(GLUT_WINDOW_HEIGHT)-26),25,1,0,sout.str().c_str());
+	if(frame_count % 1000 == 0)
+		stat.recalculateSum();
+
 
 	glutPostRedisplay();
 	glutSwapBuffers();
+	//glFlush();
 } // end function display
 
 
@@ -116,6 +143,7 @@ void keyboard(unsigned char key, int x, int y)
 
 void reshape(int w, int h)
 {
+	oldtime = CPUclock::currentTime();
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
 	glMatrixMode(GL_PROJECTION);
 	glLoadIdentity();
@@ -143,14 +171,17 @@ int main(int argc, char **argv)
 	glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
 	glClear(GL_STENCIL_BUFFER_BIT);
 
-	// color table initialization
-	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
-	{
-		float f = (640-380)*((float)c / TABLE_ENTRIES) + 380;
-		color_table[c].r = spectrumRed(f);
-		color_table[c].g = spectrumGreen(f);
-		color_table[c].b = spectrumBlue(f);
-	} // end for
+	// CPU clock initialization
+	CPUclock::setUnit("s");
+
+	//// color table initialization
+	//for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
+	//{
+	//	float f = (640-380)*((float)c / TABLE_ENTRIES) + 380;
+	//	color_table[c].r = spectrumRed(f);
+	//	color_table[c].g = spectrumGreen(f);
+	//	color_table[c].b = spectrumBlue(f);
+	//} // end for
 
 	// coordinate table initialization
 	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
