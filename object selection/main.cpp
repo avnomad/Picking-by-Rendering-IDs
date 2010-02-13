@@ -12,7 +12,7 @@
 #include <Color/glColor.h>
 #include <Color/Namings/double precision colors.h>
 
-#define TABLE_ENTRIES 16384
+#define TABLE_ENTRIES 13107
 #define COLOR_ENTRIES 17
 
 struct RGBColor
@@ -37,7 +37,7 @@ GLint selection = 255;
 int oldx;
 int oldy;
 double oldtime;
-FPS<double> stat(75);
+FPS<double> stat(20);
 unsigned int frame_count;
 double last_stat;
 
@@ -55,9 +55,9 @@ void display()
 		glStencilFunc(GL_ALWAYS,c,0xffffffff);
 		glBegin(GL_QUADS);
 			glVertex3i(coord_table[c].x,coord_table[c].y,-c);
-			glVertex3i(coord_table[c].x+60,coord_table[c].y,-c);
-			glVertex3i(coord_table[c].x+60,coord_table[c].y+90,-c);
-			glVertex3i(coord_table[c].x,coord_table[c].y+90,-c);
+			glVertex3i(coord_table[c].x+10,coord_table[c].y,-c);
+			glVertex3i(coord_table[c].x+10,coord_table[c].y+10,-c);
+			glVertex3i(coord_table[c].x,coord_table[c].y+10,-c);
 		glEnd();
 	} // end for
 
@@ -70,27 +70,31 @@ void display()
 		glColor3f(1,1,0);
 		glBegin(GL_QUADS);
 			glVertex3i(coord_table[selection].x,coord_table[selection].y,-selection);
-			glVertex3i(coord_table[selection].x+60,coord_table[selection].y,-selection);
-			glVertex3i(coord_table[selection].x+60,coord_table[selection].y+90,-selection);
-			glVertex3i(coord_table[selection].x,coord_table[selection].y+90,-selection);
+			glVertex3i(coord_table[selection].x+10,coord_table[selection].y,-selection);
+			glVertex3i(coord_table[selection].x+10,coord_table[selection].y+10,-selection);
+			glVertex3i(coord_table[selection].x,coord_table[selection].y+10,-selection);
 		glEnd();
 		glLineWidth(1);
 		glColor3f(0,0,1);
 		glBegin(GL_QUADS);
 			glVertex3i(coord_table[selection].x,coord_table[selection].y,-selection);
-			glVertex3i(coord_table[selection].x+60,coord_table[selection].y,-selection);
-			glVertex3i(coord_table[selection].x+60,coord_table[selection].y+90,-selection);
-			glVertex3i(coord_table[selection].x,coord_table[selection].y+90,-selection);
+			glVertex3i(coord_table[selection].x+10,coord_table[selection].y,-selection);
+			glVertex3i(coord_table[selection].x+10,coord_table[selection].y+10,-selection);
+			glVertex3i(coord_table[selection].x,coord_table[selection].y+10,-selection);
 		glEnd();
 	} // end if
 
 	double temp = CPUclock::currentTime();
 	stat.push(temp-oldtime);
 	oldtime = temp;
-	if(++frame_count % 75 == 0)
+	if(++frame_count % 20 == 0)
 		last_stat = stat.fps();
 	std::ostringstream sout;
 	sout << std::fixed << std::setprecision(1) << last_stat << " fps";
+	glLineWidth(4);
+	glColor(blue);
+	displayString(Vector2D<>(10,glutGet(GLUT_WINDOW_HEIGHT)-26),25,1,0,sout.str().c_str());
+	glLineWidth(2);
 	glColor(yellow);
 	displayString(Vector2D<>(10,glutGet(GLUT_WINDOW_HEIGHT)-26),25,1,0,sout.str().c_str());
 	if(frame_count % 1000 == 0)
@@ -175,7 +179,7 @@ int main(int argc, char **argv)
 	CPUclock::setUnit("s");
 
 	//// color table initialization
-	//for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
+	//for(int c = 0 ; c < COLOR_ENTRIES ; ++c)
 	//{
 	//	float f = (640-380)*((float)c / TABLE_ENTRIES) + 380;
 	//	color_table[c].r = spectrumRed(f);
@@ -186,8 +190,8 @@ int main(int argc, char **argv)
 	// coordinate table initialization
 	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
 	{
-		coord_table[c].x = 30*c;
-		coord_table[c].y = 30*c;
+		coord_table[c].x = 10*(c & 0x7f);
+		coord_table[c].y = 10*(c >> 7);
 	} // end for
 
 	// event handling initialization
