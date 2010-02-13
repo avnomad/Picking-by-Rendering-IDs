@@ -64,7 +64,8 @@ void display()
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebuffer);
 	glEnable(GL_STENCIL_TEST);
 	glPolygonMode(GL_FRONT,GL_FILL);
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+	glColorMask(0,0,0,0);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
 	{
 		glColor3fv((float*)&color_table[c % COLOR_ENTRIES]);
@@ -80,6 +81,7 @@ void display()
 	// draw image
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
 	glDisable(GL_STENCIL_TEST);
+	glColorMask(1,1,1,1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
 	{
@@ -211,7 +213,7 @@ int main(int argc, char **argv)
 	glBindRenderbuffer(GL_RENDERBUFFER,depth_stencil);
 	glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_STENCIL,640,640);
 	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,GL_DEPTH_STENCIL_ATTACHMENT,GL_RENDERBUFFER,depth_stencil);
-	//glDrawBuffer(GL_NONE);/**/
+	glDrawBuffer(GL_NONE);/**/
 
 	GL::printError();
 	GL::printFramebufferCompletenessStatus();
