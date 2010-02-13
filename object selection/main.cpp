@@ -60,6 +60,7 @@ GLuint depth_stencil,color;
 
 void display()
 {
+	// draw ids
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebuffer);
 	glEnable(GL_STENCIL_TEST);
 	glPolygonMode(GL_FRONT,GL_FILL);
@@ -76,9 +77,23 @@ void display()
 		glEnd();
 	} // end for
 
+	// draw image
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+	glDisable(GL_STENCIL_TEST);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
+	{
+		glColor3fv((float*)&color_table[c % COLOR_ENTRIES]);
+		glBegin(GL_QUADS);
+			glVertex3i(coord_table[c].x,coord_table[c].y,-c);
+			glVertex3i(coord_table[c].x+10,coord_table[c].y,-c);
+			glVertex3i(coord_table[c].x+10,coord_table[c].y+10,-c);
+			glVertex3i(coord_table[c].x,coord_table[c].y+10,-c);
+		glEnd();
+	} // end for
+
 	if(selection != 0xff)
 	{
-		glDisable(GL_STENCIL_TEST);
 		glPolygonMode(GL_FRONT,GL_LINE);
 		glLineWidth(3);
 		glColor3f(1,1,0);
@@ -114,14 +129,8 @@ void display()
 	if(frame_count % 1000 == 0)
 		stat.recalculateSum();
 
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-	glBindFramebuffer(GL_READ_FRAMEBUFFER,framebuffer);
-	glBlitFramebuffer(0,0,glutGet(GLUT_WINDOW_WIDTH)-1,glutGet(GLUT_WINDOW_HEIGHT)-1,
-		0,0,glutGet(GLUT_WINDOW_WIDTH)-1,glutGet(GLUT_WINDOW_HEIGHT)-1,GL_COLOR_BUFFER_BIT,GL_NEAREST);
-
 	glutPostRedisplay();
 	glutSwapBuffers();
-	//glFlush();
 } // end function display
 
 
@@ -193,7 +202,7 @@ int main(int argc, char **argv)
 	// OpenGL initialization
 	glGenFramebuffers(1,&framebuffer);	// framebuffer
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebuffer);
-	//glBindFramebuffer(GL_READ_FRAMEBUFFER,framebuffer);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER,framebuffer);
 	glGenRenderbuffers(1,&color);	// renderbuffers
 	glBindRenderbuffer(GL_RENDERBUFFER,color);
 	glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,640,640);
@@ -215,7 +224,7 @@ int main(int argc, char **argv)
 	glClear(GL_STENCIL_BUFFER_BIT);
 
 	// CPU clock initialization
-	CPUclock::setUnit("s");
+	CPUclock::setUnit("s");	// s for seconds
 
 	// coordinate table initialization
 	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
