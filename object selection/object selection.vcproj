@@ -199,6 +199,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\..\Unsorted\OpenGL\utility.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\Unsorted\OpenGL\utility.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\..\Unsorted\Color\wavelength to RGB.cpp"
 				>
 			</File>

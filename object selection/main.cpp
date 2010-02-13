@@ -11,6 +11,15 @@
 #include <color.h>
 #include <Color/glColor.h>
 #include <Color/Namings/double precision colors.h>
+#include <OpenGL/utility.h>
+#include <iostream>
+using std::cout;
+using std::cin;
+using std::endl;
+using std::cerr;
+using std::clog;
+using std::left;
+
 
 #define TABLE_ENTRIES 13107
 #define COLOR_ENTRIES 17
@@ -29,26 +38,32 @@ struct Point
 }; // end struct Point
 
 
-RGBColor color_table[COLOR_ENTRIES] = {{1,0,0},{1,1,0},{1,0.75,0},{1,0.5,0},{0,0.25,0},{0,0.5,0},{0,0.75,0},{0,1,0},
-			{0.25,0,0},{0.5,0.5,0},{1,0,0.5},{0,0,1},{0.75,0.75,1},{0.5,0.5,1},{0,1,1},{0,0.5,1},{0.5,0.25,0}};
+RGBColor color_table[COLOR_ENTRIES] = {
+	{1,0,0},{1,1,0},{1,0.75,0},{1,0.5,0},
+	{0,0.25,0},{0,0.5,0},{0,0.75,0},{0,1,0},
+	{0.25,0,0},{0.5,0.5,0},{1,0,0.5},{0,0,1},
+	{0.75,0.75,1},{0.5,0.5,1},{0,1,1},{0,0.5,1},
+	{0.5,0.25,0}
+};
 Point coord_table[TABLE_ENTRIES];
 
-GLint selection = 255;
+GLint selection = 0xff;
 int oldx;
 int oldy;
 double oldtime;
 FPS<double> stat(20);
 unsigned int frame_count;
 double last_stat;
+GLuint framebuffer;
+GLuint depth_stencil,color;
 
 
 void display()
 {
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-	glEnable(GL_DEPTH_TEST);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebuffer);
 	glEnable(GL_STENCIL_TEST);
 	glPolygonMode(GL_FRONT,GL_FILL);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
 	{
 		glColor3fv((float*)&color_table[c % COLOR_ENTRIES]);
@@ -61,9 +76,8 @@ void display()
 		glEnd();
 	} // end for
 
-	if(selection != 255)
+	if(selection != 0xff)
 	{
-		//glDisable(GL_DEPTH_TEST);
 		glDisable(GL_STENCIL_TEST);
 		glPolygonMode(GL_FRONT,GL_LINE);
 		glLineWidth(3);
@@ -100,6 +114,10 @@ void display()
 	if(frame_count % 1000 == 0)
 		stat.recalculateSum();
 
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+	glBindFramebuffer(GL_READ_FRAMEBUFFER,framebuffer);
+	glBlitFramebuffer(0,0,glutGet(GLUT_WINDOW_WIDTH)-1,glutGet(GLUT_WINDOW_HEIGHT)-1,
+		0,0,glutGet(GLUT_WINDOW_WIDTH)-1,glutGet(GLUT_WINDOW_HEIGHT)-1,GL_COLOR_BUFFER_BIT,GL_NEAREST);
 
 	glutPostRedisplay();
 	glutSwapBuffers();
@@ -115,7 +133,7 @@ void mouse_move(int x, int y)
 
 void active_motion(int x, int y)
 {
-	if(selection != 255)
+	if(selection != 0xff)
 	{
 		coord_table[selection].x += x-oldx;
 		coord_table[selection].y -= y-oldy;
@@ -147,6 +165,11 @@ void keyboard(unsigned char key, int x, int y)
 
 void reshape(int w, int h)
 {
+	glBindRenderbuffer(GL_RENDERBUFFER,color);
+	glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,w,h);
+	glBindRenderbuffer(GL_RENDERBUFFER,depth_stencil);
+	glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_STENCIL,w,h);
+
 	oldtime = CPUclock::currentTime();
 	glViewport(0, 0, (GLsizei)w, (GLsizei)h);
 	glMatrixMode(GL_PROJECTION);
@@ -159,7 +182,7 @@ int main(int argc, char **argv)
 {
 	// glut initialization
 	glutInit(&argc,argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH | GLUT_STENCIL);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowSize(640,640);
 	glutInitWindowPosition(32,32);
 	glutCreateWindow("Creating Geometry");
@@ -168,24 +191,31 @@ int main(int argc, char **argv)
 	glewInit();
 
 	// OpenGL initialization
+	glGenFramebuffers(1,&framebuffer);	// framebuffer
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebuffer);
+	//glBindFramebuffer(GL_READ_FRAMEBUFFER,framebuffer);
+	glGenRenderbuffers(1,&color);	// renderbuffers
+	glBindRenderbuffer(GL_RENDERBUFFER,color);
+	glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,640,640);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,color);
+	glGenRenderbuffers(1,&depth_stencil);
+	glBindRenderbuffer(GL_RENDERBUFFER,depth_stencil);
+	glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_STENCIL,640,640);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,GL_DEPTH_STENCIL_ATTACHMENT,GL_RENDERBUFFER,depth_stencil);
+	//glDrawBuffer(GL_NONE);/**/
+
+	GL::printError();
+	GL::printFramebufferCompletenessStatus();
+
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_STENCIL_TEST);
-	glClearStencil(255);
+	glClearStencil(0xff);
 	glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
 	glClear(GL_STENCIL_BUFFER_BIT);
 
 	// CPU clock initialization
 	CPUclock::setUnit("s");
-
-	//// color table initialization
-	//for(int c = 0 ; c < COLOR_ENTRIES ; ++c)
-	//{
-	//	float f = (640-380)*((float)c / TABLE_ENTRIES) + 380;
-	//	color_table[c].r = spectrumRed(f);
-	//	color_table[c].g = spectrumGreen(f);
-	//	color_table[c].b = spectrumBlue(f);
-	//} // end for
 
 	// coordinate table initialization
 	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
