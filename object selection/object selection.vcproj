@@ -174,10 +174,18 @@
 			>
 		</Filter>
 		<Filter
-			Name="Resource Files"
+			Name="Shaders"
 			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
+			<File
+				RelativePath=".\color.frag"
+				>
+			</File>
+			<File
+				RelativePath=".\color.vert"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Library"
@@ -196,6 +204,14 @@
 			</File>
 			<File
 				RelativePath="..\..\..\Unsorted\FPS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\Unsorted\OpenGL\shader loader.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\..\Unsorted\OpenGL\shader loader.h"
 				>
 			</File>
 			<File

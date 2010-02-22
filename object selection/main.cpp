@@ -12,6 +12,7 @@
 #include <Color/glColor.h>
 #include <Color/Namings/double precision colors.h>
 #include <OpenGL/utility.h>
+#include <OpenGL/shader loader.h>
 #include <iostream>
 using std::cout;
 using std::cin;
@@ -51,6 +52,8 @@ RGBColor color_table[COLORS] = {
 GLuint vertex_array_objects[SQUARES];
 GLuint buffer_objects[SQUARES];
 
+GLuint color_program;
+GLint color_location;
 
 GLint selection = 0xff;
 int oldx;
@@ -67,13 +70,15 @@ void display()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+	glUseProgram(color_program);
 	for(int c = 0 ; c < SQUARES ; ++c)
 	{
-		glColor3fv((float*)&color_table[c % COLORS]);
+		glUniform3fv(color_location,1,(float*)&color_table[c % COLORS]);
 		glBindVertexArray(vertex_array_objects[c]);
 		glDrawArrays(GL_QUADS,0,4);
 	} // end for
 	glBindVertexArray(0);
+	glUseProgram(0);
 
 
 
@@ -199,6 +204,9 @@ int main(int argc, char **argv)
 	// glew initialization
 	glewInit();
 
+	// CPU clock initialization
+	CPUclock::setUnit("s");	// s for seconds
+
 	// OpenGL initialization
 
 	//glGenFramebuffers(1,&framebuffer);	// framebuffer
@@ -223,8 +231,9 @@ int main(int argc, char **argv)
 	//glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
 	//glClear(GL_STENCIL_BUFFER_BIT);
 
-	// CPU clock initialization
-	CPUclock::setUnit("s");	// s for seconds
+	// shader initialization
+	color_program = load_shader_program("color.vert","color.frag");
+	color_location = glGetUniformLocation(color_program,"color");
 
 	// vertex array object initialization
 	glGenVertexArrays(SQUARES,vertex_array_objects);
