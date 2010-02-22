@@ -35,6 +35,7 @@ struct Point
 {
 	GLint x;
 	GLint y;
+	GLint z;
 }; // end struct Point
 
 
@@ -45,7 +46,8 @@ RGBColor color_table[COLOR_ENTRIES] = {
 	{0.75,0.75,1},{0.5,0.5,1},{0,1,1},{0,0.5,1},
 	{0.5,0.25,0}
 };
-Point coord_table[TABLE_ENTRIES];
+GLuint coord_buffer;
+GLuint color_buffer;
 
 GLint selection = 0xff;
 int oldx;
@@ -66,53 +68,28 @@ void display()
 	glPolygonMode(GL_FRONT,GL_FILL);
 	glColorMask(0,0,0,0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
-	{
-		glColor3fv((float*)&color_table[c % COLOR_ENTRIES]);
-		glStencilFunc(GL_ALWAYS,c,0xffffffff);
-		glBegin(GL_QUADS);
-			glVertex3i(coord_table[c].x,coord_table[c].y,-c);
-			glVertex3i(coord_table[c].x+10,coord_table[c].y,-c);
-			glVertex3i(coord_table[c].x+10,coord_table[c].y+10,-c);
-			glVertex3i(coord_table[c].x,coord_table[c].y+10,-c);
-		glEnd();
-	} // end for
+	glStencilFunc(GL_ALWAYS,0,0xffffffff);
+	glDrawArrays(GL_QUADS,0,4*TABLE_ENTRIES);
 
 	// draw image
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
 	glDisable(GL_STENCIL_TEST);
 	glColorMask(1,1,1,1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
-	{
-		glColor3fv((float*)&color_table[c % COLOR_ENTRIES]);
-		glBegin(GL_QUADS);
-			glVertex3i(coord_table[c].x,coord_table[c].y,-c);
-			glVertex3i(coord_table[c].x+10,coord_table[c].y,-c);
-			glVertex3i(coord_table[c].x+10,coord_table[c].y+10,-c);
-			glVertex3i(coord_table[c].x,coord_table[c].y+10,-c);
-		glEnd();
-	} // end for
+	glStencilFunc(GL_ALWAYS,0,0xffffffff);
+	glDrawArrays(GL_QUADS,0,4*TABLE_ENTRIES);
 
 	if(selection != 0xff)
 	{
+		glDisableClientState(GL_COLOR_ARRAY);
 		glPolygonMode(GL_FRONT,GL_LINE);
 		glLineWidth(3);
 		glColor3f(1,1,0);
-		glBegin(GL_QUADS);
-			glVertex3i(coord_table[selection].x,coord_table[selection].y,-selection);
-			glVertex3i(coord_table[selection].x+10,coord_table[selection].y,-selection);
-			glVertex3i(coord_table[selection].x+10,coord_table[selection].y+10,-selection);
-			glVertex3i(coord_table[selection].x,coord_table[selection].y+10,-selection);
-		glEnd();
+		glDrawArrays(GL_QUADS,4*selection,4);
 		glLineWidth(1);
 		glColor3f(0,0,1);
-		glBegin(GL_QUADS);
-			glVertex3i(coord_table[selection].x,coord_table[selection].y,-selection);
-			glVertex3i(coord_table[selection].x+10,coord_table[selection].y,-selection);
-			glVertex3i(coord_table[selection].x+10,coord_table[selection].y+10,-selection);
-			glVertex3i(coord_table[selection].x,coord_table[selection].y+10,-selection);
-		glEnd();
+		glDrawArrays(GL_QUADS,4*selection,4);
+		glEnableClientState(GL_COLOR_ARRAY);
 	} // end if
 
 	double temp = CPUclock::currentTime();
@@ -132,7 +109,9 @@ void display()
 		stat.recalculateSum();
 
 	glutPostRedisplay();
-	glutSwapBuffers();
+	//glutSwapBuffers();
+	glFinish();
+	//glFlush();
 } // end function display
 
 
@@ -144,11 +123,11 @@ void mouse_move(int x, int y)
 
 void active_motion(int x, int y)
 {
-	if(selection != 0xff)
-	{
-		coord_table[selection].x += x-oldx;
-		coord_table[selection].y -= y-oldy;
-	} // end if
+	//if(selection != 0xff)
+	//{
+	//	coord_table[selection].x += x-oldx;
+	//	coord_table[selection].y -= y-oldy;
+	//} // end if
 	oldx = x;
 	oldy = y;
 } // end function active_motion
@@ -193,7 +172,7 @@ int main(int argc, char **argv)
 {
 	// glut initialization
 	glutInit(&argc,argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE | GLUT_DEPTH);
 	glutInitWindowSize(640,640);
 	glutInitWindowPosition(32,32);
 	glutCreateWindow("Creating Geometry");
@@ -213,7 +192,6 @@ int main(int argc, char **argv)
 	glBindRenderbuffer(GL_RENDERBUFFER,depth_stencil);
 	glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_STENCIL,640,640);
 	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,GL_DEPTH_STENCIL_ATTACHMENT,GL_RENDERBUFFER,depth_stencil);
-	glDrawBuffer(GL_NONE);/**/
 
 	GL::printError();
 	GL::printFramebufferCompletenessStatus();
@@ -229,12 +207,52 @@ int main(int argc, char **argv)
 	CPUclock::setUnit("s");	// s for seconds
 
 	// coordinate table initialization
-	for(int c = 0 ; c < TABLE_ENTRIES ; ++c)
-	{
-		coord_table[c].x = 10*(c & 0x7f);
-		coord_table[c].y = 10*(c >> 7);
-	} // end for
+	glGenBuffers(1,&coord_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER,coord_buffer);
+	glBufferData(GL_ARRAY_BUFFER,TABLE_ENTRIES*4*3*sizeof(int),NULL,GL_DYNAMIC_DRAW);
+	Point *buffer = (Point *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
+		for(int c = 0 ; c < 4*TABLE_ENTRIES ; c += 4)
+		{
+			buffer[c].x = 10*((c & 0x1ff)>>2);
+			buffer[c].y = 10*(c >> 9);
+			buffer[c].z = -(c>>2);
+			buffer[c+1].x = buffer[c].x+10;
+			buffer[c+1].y = buffer[c].y;
+			buffer[c+1].z = buffer[c].z;
+			buffer[c+2].x = buffer[c].x+10;
+			buffer[c+2].y = buffer[c].y+10;
+			buffer[c+2].z = buffer[c].z;
+			buffer[c+3].x = buffer[c].x;
+			buffer[c+3].y = buffer[c].y+10;
+			buffer[c+3].z = buffer[c].z;
+		} // end for
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+	glVertexPointer(3,GL_INT,0,0);
+	glEnableClientState(GL_VERTEX_ARRAY);
 
+	glGenBuffers(1,&color_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER,color_buffer);
+	glBufferData(GL_ARRAY_BUFFER,TABLE_ENTRIES*4*3*sizeof(float),NULL,GL_DYNAMIC_DRAW);
+	RGBColor *cBuffer = (RGBColor *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
+		for(int c = 0 ; c < 4*TABLE_ENTRIES ; c += 4)
+		{
+			cBuffer[c].r = color_table[(c>>2) % COLOR_ENTRIES].r;
+			cBuffer[c].g = color_table[(c>>2) % COLOR_ENTRIES].g;
+			cBuffer[c].b = color_table[(c>>2) % COLOR_ENTRIES].b;
+			cBuffer[c+1].r = color_table[(c>>2) % COLOR_ENTRIES].r;
+			cBuffer[c+1].g = color_table[(c>>2) % COLOR_ENTRIES].g;
+			cBuffer[c+1].b = color_table[(c>>2) % COLOR_ENTRIES].b;
+			cBuffer[c+2].r = color_table[(c>>2) % COLOR_ENTRIES].r;
+			cBuffer[c+2].g = color_table[(c>>2) % COLOR_ENTRIES].g;
+			cBuffer[c+2].b = color_table[(c>>2) % COLOR_ENTRIES].b;
+			cBuffer[c+3].r = color_table[(c>>2) % COLOR_ENTRIES].r;
+			cBuffer[c+3].g = color_table[(c>>2) % COLOR_ENTRIES].g;
+			cBuffer[c+3].b = color_table[(c>>2) % COLOR_ENTRIES].b;
+		} // end for
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+	glColorPointer(3,GL_FLOAT,0,0);
+	glEnableClientState(GL_COLOR_ARRAY);
+	
 	// event handling initialization
 	glutDisplayFunc(display);
 	glutKeyboardFunc(keyboard);
