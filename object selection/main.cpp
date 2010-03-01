@@ -49,9 +49,8 @@ RGBColor color_table[COLORS] = {
 
 GLuint clearID[4] = {0xffffffff,0xffffffff,0xffffffff,0xffffffff};
 
-
-GLuint vertex_array_objects[SQUARES];
-GLuint buffer_objects[SQUARES];
+GLuint vertex_array;
+GLuint buffer_object;
 
 GLuint color_program;
 GLint color_location;
@@ -77,14 +76,14 @@ void display()
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
 	glDrawBuffer(GL_FRONT);
 	glUseProgram(color_program);
+	glBindVertexArray(vertex_array);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	for(int c = 0 ; c < SQUARES ; ++c)
 	{
 		glUniform3fv(color_location,1,(float*)&color_table[c % COLORS]);
-		glBindVertexArray(vertex_array_objects[c]);
-		glDrawArrays(GL_QUADS,0,4);
+		glDrawArrays(GL_QUADS,4*c,4);
 	} // end for
 
 
@@ -99,8 +98,7 @@ void display()
 	for(unsigned int c = 0 ; c < SQUARES ; ++c)
 	{
 		glUniform1ui(id_location,c);
-		glBindVertexArray(vertex_array_objects[c]);
-		glDrawArrays(GL_QUADS,0,4);
+		glDrawArrays(GL_QUADS,4*c,4);
 	} // end for
 
 	// draw highlight
@@ -111,15 +109,14 @@ void display()
 		glUseProgram(color_program);
 
 		glPolygonMode(GL_FRONT,GL_LINE);
-		glBindVertexArray(vertex_array_objects[selection]);
 
 		glLineWidth(3);
 		glUniform3f(color_location,1.0,1.0,0.0);
-		glDrawArrays(GL_QUADS,0,4);
+		glDrawArrays(GL_QUADS,4*selection,4);
 
 		glLineWidth(1);
 		glUniform3f(color_location,0.0,0.0,1.0);
-		glDrawArrays(GL_QUADS,0,4);
+		glDrawArrays(GL_QUADS,4*selection,4);
 
 		glPolygonMode(GL_FRONT,GL_FILL);
 	} // end if
@@ -128,8 +125,8 @@ void display()
 	// draw fps
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
 	glDrawBuffer(GL_FRONT);
-	glBindVertexArray(0);
 	glUseProgram(0);
+	glBindVertexArray(0);
 
 	double temp = CPUclock::currentTime();
 	stat.push(temp-oldtime);
@@ -165,8 +162,7 @@ void active_motion(int x, int y)
 {
 	if(selection != 0xffffffff)
 	{
-		glBindBuffer(GL_ARRAY_BUFFER,buffer_objects[selection]);
-		Point *buffer = (Point *)glMapBuffer(GL_ARRAY_BUFFER,GL_READ_WRITE);
+		Point *buffer = (Point *)glMapBufferRange(GL_ARRAY_BUFFER,4*selection*3*sizeof(GLint),4*3*sizeof(GLint),GL_READ_WRITE);/**/
 
 		buffer[0].x += x-oldx;
 		buffer[0].y -= y-oldy;
@@ -267,39 +263,38 @@ int main(int argc, char **argv)
 
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
-	glClearColor(0.1f,0.1f,0.1f,0.0f);
+	glClearColor(0.05f,0.05f,0.05f,0.0f);
 	glClearBufferuiv(GL_COLOR,0,clearID);
 
 
-
 	// vertex array object initialization
-	glGenVertexArrays(SQUARES,vertex_array_objects);
-	glGenBuffers(SQUARES,buffer_objects);
+	glGenVertexArrays(1,&vertex_array);
+	glBindVertexArray(vertex_array);
+
+	glGenBuffers(1,&buffer_object);
+	glBindBuffer(GL_ARRAY_BUFFER,buffer_object);
+	glBufferData(GL_ARRAY_BUFFER,SQUARES*4*3*sizeof(GLint),NULL,GL_DYNAMIC_DRAW);
+
+	Point *buffer = (Point *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
 	for(int c = 0 ; c < SQUARES ; ++c)
 	{
-		glBindVertexArray(vertex_array_objects[c]);
-
-		glBindBuffer(GL_ARRAY_BUFFER,buffer_objects[c]);
-		glBufferData(GL_ARRAY_BUFFER,4*3*sizeof(GLint),NULL,GL_DYNAMIC_DRAW);
-
-		Point *buffer = (Point *)glMapBuffer(GL_ARRAY_BUFFER,GL_WRITE_ONLY);
-		buffer[0].x = 10*((c & 0x7f));
-		buffer[0].y = 10*(c >> 7);
-		buffer[0].z = -c;
-		buffer[1].x = buffer[0].x+10;
-		buffer[1].y = buffer[0].y;
-		buffer[1].z = buffer[0].z;
-		buffer[2].x = buffer[0].x+10;
-		buffer[2].y = buffer[0].y+10;
-		buffer[2].z = buffer[0].z;
-		buffer[3].x = buffer[0].x;
-		buffer[3].y = buffer[0].y+10;
-		buffer[3].z = buffer[0].z;
-		glUnmapBuffer(GL_ARRAY_BUFFER);
-
-		glVertexPointer(3,GL_INT,0,0);
-		glEnableClientState(GL_VERTEX_ARRAY);
+		buffer[4*c+0].x = 10*((c & 0x7f));
+		buffer[4*c+0].y = 10*(c >> 7);
+		buffer[4*c+0].z = -c;
+		buffer[4*c+1].x = buffer[4*c+0].x+10;
+		buffer[4*c+1].y = buffer[4*c+0].y;
+		buffer[4*c+1].z = buffer[4*c+0].z;
+		buffer[4*c+2].x = buffer[4*c+0].x+10;
+		buffer[4*c+2].y = buffer[4*c+0].y+10;
+		buffer[4*c+2].z = buffer[4*c+0].z;
+		buffer[4*c+3].x = buffer[4*c+0].x;
+		buffer[4*c+3].y = buffer[4*c+0].y+10;
+		buffer[4*c+3].z = buffer[4*c+0].z;
 	} // end for
+	glUnmapBuffer(GL_ARRAY_BUFFER);
+
+	glVertexPointer(3,GL_INT,0,0);
+	glEnableClientState(GL_VERTEX_ARRAY);
 	
 	// event handling initialization
 	glutDisplayFunc(display);
