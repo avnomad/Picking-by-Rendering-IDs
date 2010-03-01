@@ -1,5 +1,5 @@
 #include <gl/glew.h>
-#include <gl/glut.h>
+#include <gl/freeglut.h>
 #include <cstdlib>
 #include <Color/wavelength to RGB.h>
 #include <FPS.h>
@@ -47,6 +47,7 @@ RGBColor color_table[COLORS] = {
 	{0.5,0.25,0}
 };
 
+GLuint clearID[4] = {0xffffffff,0xffffffff,0xffffffff,0xffffffff};
 
 
 GLuint vertex_array_objects[SQUARES];
@@ -54,67 +55,81 @@ GLuint buffer_objects[SQUARES];
 
 GLuint color_program;
 GLint color_location;
+GLuint id_program;
+GLint id_location;
+GLint color_attachment;
 
-GLint selection = 0xff;
 int oldx;
 int oldy;
 double oldtime;
 FPS<double> stat(20);
 unsigned int frame_count;
 double last_stat;
+
+GLuint selection = 0xffffffff;
 GLuint framebuffer;
-GLuint depth_stencil,color;
+GLuint color,depth;
 
 
 void display()
 {
+	// draw color
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+	glDrawBuffer(GL_FRONT);
+	glUseProgram(color_program);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glUseProgram(color_program);
 	for(int c = 0 ; c < SQUARES ; ++c)
 	{
 		glUniform3fv(color_location,1,(float*)&color_table[c % COLORS]);
 		glBindVertexArray(vertex_array_objects[c]);
 		glDrawArrays(GL_QUADS,0,4);
 	} // end for
-	glBindVertexArray(0);
-	glUseProgram(0);
-
-
-
-
-
 
 
 	// draw ids
-	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebuffer);
-	//glEnable(GL_STENCIL_TEST);
-	//glPolygonMode(GL_FRONT,GL_FILL);
-	//glColorMask(0,0,0,0);
-	//glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	//glStencilFunc(GL_ALWAYS,0,0xffffffff);
-	//glDrawArrays(GL_QUADS,0,4*TABLE_ENTRIES);
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebuffer);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0+color_attachment);
+	glUseProgram(id_program);
 
-	// draw image
-	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
-	//glDisable(GL_STENCIL_TEST);
-	//glColorMask(1,1,1,1);
-	//glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	//glStencilFunc(GL_ALWAYS,0,0xffffffff);
-	//glDrawArrays(GL_QUADS,0,4*TABLE_ENTRIES);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glClearBufferuiv(GL_COLOR,0,clearID);
 
-	//if(selection != 0xff)
-	//{
-	//	glDisableClientState(GL_COLOR_ARRAY);
-	//	glPolygonMode(GL_FRONT,GL_LINE);
-	//	glLineWidth(3);
-	//	glColor3f(1,1,0);
-	//	glDrawArrays(GL_QUADS,4*selection,4);
-	//	glLineWidth(1);
-	//	glColor3f(0,0,1);
-	//	glDrawArrays(GL_QUADS,4*selection,4);
-	//	glEnableClientState(GL_COLOR_ARRAY);
-	//} // end if
+	for(unsigned int c = 0 ; c < SQUARES ; ++c)
+	{
+		glUniform1ui(id_location,c);
+		glBindVertexArray(vertex_array_objects[c]);
+		glDrawArrays(GL_QUADS,0,4);
+	} // end for
+
+	// draw highlight
+	if(selection != 0xffffffff)
+	{
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+		glDrawBuffer(GL_FRONT);
+		glUseProgram(color_program);
+
+		glPolygonMode(GL_FRONT,GL_LINE);
+		glBindVertexArray(vertex_array_objects[selection]);
+
+		glLineWidth(3);
+		glUniform3f(color_location,1.0,1.0,0.0);
+		glDrawArrays(GL_QUADS,0,4);
+
+		glLineWidth(1);
+		glUniform3f(color_location,0.0,0.0,1.0);
+		glDrawArrays(GL_QUADS,0,4);
+
+		glPolygonMode(GL_FRONT,GL_FILL);
+	} // end if
+
+
+	// draw fps
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER,0);
+	glDrawBuffer(GL_FRONT);
+	glBindVertexArray(0);
+	glUseProgram(0);
 
 	double temp = CPUclock::currentTime();
 	stat.push(temp-oldtime);
@@ -132,6 +147,7 @@ void display()
 	if(frame_count % 1000 == 0)
 		stat.recalculateSum();
 
+	GL::printError();
 	glutPostRedisplay();
 	//glutSwapBuffers();
 	glFinish();
@@ -141,17 +157,28 @@ void display()
 
 void mouse_move(int x, int y)
 {
-	//glReadPixels(x,glutGet(GLUT_WINDOW_HEIGHT)-1-y,1,1,GL_STENCIL_INDEX,GL_INT,&selection);
+	glReadPixels(x,glutGet(GLUT_WINDOW_HEIGHT)-1-y,1,1,GL_RED_INTEGER,GL_UNSIGNED_INT,&selection);
 } // end function mouse_move
 
 
 void active_motion(int x, int y)
 {
-	//if(selection != 0xff)
-	//{
-	//	coord_table[selection].x += x-oldx;
-	//	coord_table[selection].y -= y-oldy;
-	//} // end if
+	if(selection != 0xffffffff)
+	{
+		glBindBuffer(GL_ARRAY_BUFFER,buffer_objects[selection]);
+		Point *buffer = (Point *)glMapBuffer(GL_ARRAY_BUFFER,GL_READ_WRITE);
+
+		buffer[0].x += x-oldx;
+		buffer[0].y -= y-oldy;
+		buffer[1].x = buffer[0].x+10;
+		buffer[1].y = buffer[0].y;
+		buffer[2].x = buffer[0].x+10;
+		buffer[2].y = buffer[0].y+10;
+		buffer[3].x = buffer[0].x;
+		buffer[3].y = buffer[0].y+10;
+
+		glUnmapBuffer(GL_ARRAY_BUFFER);
+	} // end if
 	oldx = x;
 	oldy = y;
 } // end function active_motion
@@ -179,10 +206,10 @@ void keyboard(unsigned char key, int x, int y)
 
 void reshape(int w, int h)
 {
-	//glBindRenderbuffer(GL_RENDERBUFFER,color);
-	//glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,w,h);
-	//glBindRenderbuffer(GL_RENDERBUFFER,depth_stencil);
-	//glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_STENCIL,w,h);
+	glBindRenderbuffer(GL_RENDERBUFFER,color);
+	glRenderbufferStorage(GL_RENDERBUFFER,GL_R32UI,w,h);
+	glBindRenderbuffer(GL_RENDERBUFFER,depth);
+	glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,w,h);
 
 	oldtime = CPUclock::currentTime();
 	glViewport(0,0,(GLsizei)w,(GLsizei)h);
@@ -203,37 +230,47 @@ int main(int argc, char **argv)
 
 	// glew initialization
 	glewInit();
+	glBindFragDataLocation = (void (__stdcall*)(GLuint,GLuint,const char*))glutGetProcAddress("glBindFragDataLocation");
+	glGetFragDataLocation = (GLint (__stdcall*)(GLuint,const char*))glutGetProcAddress("glGetFragDataLocation");
+	glUniform1ui = (void (__stdcall*)(GLint,GLuint))glutGetProcAddress("glUniform1ui");
+	glClearBufferuiv = (void (__stdcall*)(GLenum,GLint,const GLuint *))glutGetProcAddress("glClearBufferuiv");
 
 	// CPU clock initialization
 	CPUclock::setUnit("s");	// s for seconds
 
-	// OpenGL initialization
-
-	//glGenFramebuffers(1,&framebuffer);	// framebuffer
-	//glBindFramebuffer(GL_DRAW_FRAMEBUFFER,framebuffer);
-	//glBindFramebuffer(GL_READ_FRAMEBUFFER,framebuffer);
-	//glGenRenderbuffers(1,&color);	// renderbuffers
-	//glBindRenderbuffer(GL_RENDERBUFFER,color);
-	//glRenderbufferStorage(GL_RENDERBUFFER,GL_RGBA,640,640);
-	//glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,GL_COLOR_ATTACHMENT0,GL_RENDERBUFFER,color);
-	//glGenRenderbuffers(1,&depth_stencil);
-	//glBindRenderbuffer(GL_RENDERBUFFER,depth_stencil);
-	//glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_STENCIL,640,640);
-	//glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,GL_DEPTH_STENCIL_ATTACHMENT,GL_RENDERBUFFER,depth_stencil);
-
-	//GL::printError();
-	//GL::printFramebufferCompletenessStatus();
-
-	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LEQUAL);
-	//glEnable(GL_STENCIL_TEST);
-	//glClearStencil(0xff);
-	//glStencilOp(GL_KEEP,GL_KEEP,GL_REPLACE);
-	//glClear(GL_STENCIL_BUFFER_BIT);
-
 	// shader initialization
 	color_program = load_shader_program("color.vert","color.frag");
 	color_location = glGetUniformLocation(color_program,"color");
+	id_program = load_shader_program("ID.vert","ID.frag");
+	id_location = glGetUniformLocation(id_program,"idin");
+	color_attachment = glGetFragDataLocation(id_program,"idout");
+
+	// OpenGL initialization
+	glGenFramebuffers(1,&framebuffer);	// framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER,framebuffer);
+
+	glGenRenderbuffers(1,&color);	// color renderbuffer
+	glBindRenderbuffer(GL_RENDERBUFFER,color);
+	glRenderbufferStorage(GL_RENDERBUFFER,GL_R32UI,640,640);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,GL_COLOR_ATTACHMENT0+color_attachment,GL_RENDERBUFFER,color);
+
+	glGenRenderbuffers(1,&depth);	// depth renderbuffer
+	glBindRenderbuffer(GL_RENDERBUFFER,depth);
+	glRenderbufferStorage(GL_RENDERBUFFER,GL_DEPTH_COMPONENT,640,640);
+	glFramebufferRenderbuffer(GL_DRAW_FRAMEBUFFER,GL_DEPTH_ATTACHMENT,GL_RENDERBUFFER,depth);
+
+	glDrawBuffer(GL_COLOR_ATTACHMENT0+color_attachment);
+	glReadBuffer(GL_COLOR_ATTACHMENT0+color_attachment);
+
+	GL::printError();
+	GL::printFramebufferCompletenessStatus();
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LEQUAL);
+	glClearColor(0.1f,0.1f,0.1f,0.0f);
+	glClearBufferuiv(GL_COLOR,0,clearID);
+
+
 
 	// vertex array object initialization
 	glGenVertexArrays(SQUARES,vertex_array_objects);

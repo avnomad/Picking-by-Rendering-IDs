@@ -186,6 +186,14 @@
 				RelativePath=".\color.vert"
 				>
 			</File>
+			<File
+				RelativePath=".\ID.frag"
+				>
+			</File>
+			<File
+				RelativePath=".\ID.vert"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Library"
