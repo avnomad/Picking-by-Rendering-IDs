@@ -162,7 +162,7 @@ void active_motion(int x, int y)
 {
 	if(selection != 0xffffffff)
 	{
-		Point *buffer = (Point *)glMapBufferRange(GL_ARRAY_BUFFER,4*selection*3*sizeof(GLint),4*3*sizeof(GLint),GL_READ_WRITE);/**/
+		Point *buffer = (Point *)glMapBufferRange(GL_ARRAY_BUFFER,4*selection*3*sizeof(GLint),4*3*sizeof(GLint),GL_MAP_READ_BIT|GL_MAP_WRITE_BIT);
 
 		buffer[0].x += x-oldx;
 		buffer[0].y -= y-oldy;
