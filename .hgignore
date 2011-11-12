@@ -1,0 +1,8 @@
+syntax: regexp
+Debug/*
+ipch/*
+Release/*
+syntax: glob
+object selection.opensdf
+object selection.sdf
+object selection.suo
