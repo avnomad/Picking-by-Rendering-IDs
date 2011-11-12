@@ -22,7 +22,7 @@ using std::clog;
 using std::left;
 
 
-#define SQUARES 13107
+#define SQUARES 1310
 #define COLORS 17
 
 struct RGBColor
@@ -128,9 +128,6 @@ void display()
 	glUseProgram(0);
 	glBindVertexArray(0);
 
-	double temp = CPUclock::currentTime();
-	stat.push(temp-oldtime);
-	oldtime = temp;
 	if(++frame_count % 20 == 0)
 		last_stat = stat.fps();
 	std::ostringstream sout;
@@ -146,9 +143,12 @@ void display()
 
 	GL::printError();
 	glutPostRedisplay();
-	//glutSwapBuffers();
-	glFinish();
+	glutSwapBuffers();
+	//glFinish();
 	//glFlush();
+	double temp = CPUclock::currentTime();
+	stat.push(temp-oldtime);
+	oldtime = temp;
 } // end function display
 
 
@@ -219,17 +219,13 @@ int main(int argc, char **argv)
 {
 	// glut initialization
 	glutInit(&argc,argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_SINGLE | GLUT_DEPTH);
+	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowSize(640,640);
 	glutInitWindowPosition(32,32);
 	glutCreateWindow("Creating Geometry");
 
 	// glew initialization
 	glewInit();
-	glBindFragDataLocation = (void (__stdcall*)(GLuint,GLuint,const char*))glutGetProcAddress("glBindFragDataLocation");
-	glGetFragDataLocation = (GLint (__stdcall*)(GLuint,const char*))glutGetProcAddress("glGetFragDataLocation");
-	glUniform1ui = (void (__stdcall*)(GLint,GLuint))glutGetProcAddress("glUniform1ui");
-	glClearBufferuiv = (void (__stdcall*)(GLenum,GLint,const GLuint *))glutGetProcAddress("glClearBufferuiv");
 
 	// CPU clock initialization
 	CPUclock::setUnit("s");	// s for seconds
