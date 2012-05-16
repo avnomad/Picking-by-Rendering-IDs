@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 11.00
 # Visual Studio 2010
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "object selection", "object selection\object selection.vcxproj", "{95C9B3F4-F92E-4378-91BD-9E7294A8D410}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Picking by Rendering IDs", "Picking by Rendering IDs\Picking by Rendering IDs.vcxproj", "{95C9B3F4-F92E-4378-91BD-9E7294A8D410}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

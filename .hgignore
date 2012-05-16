@@ -3,6 +3,6 @@ Debug/*
 ipch/*
 Release/*
 syntax: glob
-object selection.opensdf
-object selection.sdf
-object selection.suo
+Picking by Rendering IDs.opensdf
+Picking by Rendering IDs.sdf
+Picking by Rendering IDs.suo
