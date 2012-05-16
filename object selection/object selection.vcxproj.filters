@@ -13,16 +13,10 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav</Extensions>
     </Filter>
-    <Filter Include="Library">
-      <UniqueIdentifier>{7f54632e-b974-4755-bd1d-a0453172dfcf}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\..\..\..\Visual Studio 2008\Projects\Unsorted\Color\namings\double precision colors.cpp">
-      <Filter>Library</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -38,22 +32,5 @@
     <None Include="ID.vert">
       <Filter>Shaders</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\..\Unsorted\algorithms.h">
-      <Filter>Library</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Unsorted\FPS.h">
-      <Filter>Library</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Unsorted\OpenGL\shader loader.h">
-      <Filter>Library</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Unsorted\OpenGL\utility.h">
-      <Filter>Library</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\..\Unsorted\Color\wavelength to RGB.h">
-      <Filter>Library</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>
